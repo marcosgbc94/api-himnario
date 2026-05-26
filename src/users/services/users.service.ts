@@ -41,7 +41,7 @@ export class UsersService {
   // Método para obtener todos los usuarios
   async findAll() {
     try {
-      return await this.usersRepository.find();
+      return await this.usersRepository.find({ where: { active: true } });
     } catch {
       throw new InternalServerErrorException('Error al obtener los usuarios');
     }
@@ -54,7 +54,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.usersRepository.findOneBy({ id });
+      const user = await this.usersRepository.findOneBy({ id, active: true });
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -69,7 +69,7 @@ export class UsersService {
   // Método para obtener un usuario por su correo electrónico
   async findByEmail(email: string) {
     try {
-      return await this.usersRepository.findOneBy({ email });
+      return await this.usersRepository.findOneBy({ email, active: true });
     } catch {
       throw new InternalServerErrorException(
         'Error al obtener el usuario por correo electrónico',

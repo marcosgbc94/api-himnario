@@ -9,9 +9,11 @@ import { EnvModel } from 'src/models/env.model';
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(private readonly configService: ConfigService<EnvModel>) {
     const secret = configService.get('JWT_SECRET', { infer: true });
+
     if (!secret) {
       throw new Error('JWT Secret no está configurada');
     }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
