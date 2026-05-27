@@ -2,6 +2,12 @@ import { BeforeInsert, Column, CreateDateColumn, DeleteDateColumn, Entity, Prima
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 
+export enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  EDITOR = 'editor',
+}
+
 @Entity({
   name: 'users',
 })
@@ -65,6 +71,9 @@ export class User {
     name: 'deleted_by',
   })
   deletedBy: string;
+
+  @Column('text', { array: true, default: [UserRole.USER] })
+  role: UserRole[];
 
   // Antes de insertar un nuevo usuario en la base de datos, se ejecuta este método para hashear la contraseña antes de guardarla
   @BeforeInsert()

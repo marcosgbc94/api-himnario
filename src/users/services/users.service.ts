@@ -43,9 +43,17 @@ export class UsersService {
   }
 
   // Método para obtener todos los usuarios
-  async findAll() {
+  async findAll(state: string) {
     try {
-      return await this.usersRepository.find({ where: { active: true } });
+      const whereCondition = {};
+
+      if (state === "ACTIVES") {
+        whereCondition.active = true;
+      } else if (state === "INACTIVES") {
+        whereCondition.active = false;
+      }
+
+      return await this.usersRepository.find({ where: whereCondition });
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -55,13 +63,21 @@ export class UsersService {
   }
 
   // Método para obtener un usuario por su ID
-  async findOne(id: string) {
+  async findOne(id: string, state: string) {
     try {
       if (!id) {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.usersRepository.findOneBy({ id, active: true });
+      const whereCondition = { id };
+
+      if (state === "ACTIVE") {
+        whereCondition.active = true;
+      } else if (state === "INACTIVE") {
+        whereCondition.active = false;
+      }
+
+      const user = await this.usersRepository.findOne({ where: whereCondition });
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -97,7 +113,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id);
+      const user = await this.findOne(id, "ACTIVE");
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -123,7 +139,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id);
+      const user = await this.findOne(id, "ACTIVE");
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -148,7 +164,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id);
+      const user = await this.findOne(id, "ACTIVE");
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -173,7 +189,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id);
+      const user = await this.findOne(id, "ALL");
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
