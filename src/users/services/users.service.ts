@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -33,7 +34,10 @@ export class UsersService {
       });
 
       return await this.usersRepository.save(userCreated);
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al crear el usuario');
     }
   }
@@ -42,7 +46,10 @@ export class UsersService {
   async findAll() {
     try {
       return await this.usersRepository.find({ where: { active: true } });
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al obtener los usuarios');
     }
   }
@@ -61,7 +68,10 @@ export class UsersService {
       }
 
       return user;
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al obtener el usuario');
     }
   }
@@ -70,7 +80,10 @@ export class UsersService {
   async findByEmail(email: string) {
     try {
       return await this.usersRepository.findOneBy({ email, active: true });
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         'Error al obtener el usuario por correo electrónico',
       );
@@ -90,11 +103,15 @@ export class UsersService {
         throw new BadRequestException('Usuario no encontrado');
       }
 
-      user.updatedBy = userId;
-
       const userUpdated = this.usersRepository.merge(user, updateUserDto);
+
+      userUpdated.updatedBy = userId;
+
       return await this.usersRepository.save(userUpdated);
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al actualizar el usuario');
     }
   }
@@ -116,7 +133,10 @@ export class UsersService {
       user.updatedBy = userId;
 
       return await this.usersRepository.save(user);
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al activar el usuario');
     }
   }
@@ -138,7 +158,10 @@ export class UsersService {
       user.updatedBy = userId;
 
       return await this.usersRepository.save(user);
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al desactivar el usuario');
     }
   }
@@ -162,8 +185,11 @@ export class UsersService {
       await this.usersRepository.save(user);
 
       // Aplica el soft remove para que TypeORM estampe la fecha en 'deleted_at'
-      await this.usersRepository.softRemove(user);
-    } catch {
+      return await this.usersRepository.softRemove(user);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al eliminar el usuario');
     }
   }

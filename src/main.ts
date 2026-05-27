@@ -23,6 +23,7 @@ async function bootstrap() {
     .setTitle('Himnario API')
     .setDescription('API para himnario')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const documentFactory = () => {
     return SwaggerModule.createDocument(app, swaggerConfig);

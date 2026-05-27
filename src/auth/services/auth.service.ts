@@ -1,8 +1,14 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'src/users/services/users.service';
 import * as bcrypt from 'bcrypt';
-import { Payload } from '../models/Payload.model';
+
+import { UsersService } from 'src/users/services/users.service';
+import { Payload } from '../models/payload.model';
 
 @Injectable()
 export class AuthService {
@@ -27,14 +33,17 @@ export class AuthService {
       }
 
       return user;
-    } catch {
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Error al validar el usuario');
     }
   }
 
   // Genera un token JWT para el usuario autenticado
-  generateToken(user: any) {
-    const payload: Payload = { sub: user.id };
+  generateToken(userId: string): string {
+    const payload: Payload = { sub: userId };
     return this.jwtService.sign(payload);
   }
 }

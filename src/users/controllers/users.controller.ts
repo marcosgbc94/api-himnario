@@ -10,15 +10,16 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { Payload } from 'src/auth/models/Payload.model';
+import type { RequestWithUser } from 'src/auth/models/request.model';
 
 @UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -28,8 +29,11 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'El correo ya está en uso' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
   @Post()
-  async create(@Body() createUserDto: CreateUserDto, @Req() req: Request) {
-    const payload = req.user as Payload;
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const payload = req.user;
     const userId = payload.sub;
     return await this.usersService.create(createUserDto, userId);
   }
@@ -63,9 +67,9 @@ export class UsersController {
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    const payload = req.user as Payload;
+    const payload = req.user;
     const userId = payload.sub;
     return await this.usersService.update(id, updateUserDto, userId);
   }
@@ -78,9 +82,9 @@ export class UsersController {
   @Delete(':id')
   async remove(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    const payload = req.user as Payload;
+    const payload = req.user;
     const userId = payload.sub;
     return await this.usersService.remove(id, userId);
   }
@@ -92,9 +96,9 @@ export class UsersController {
   @ApiResponse({ status: 500, description: 'Error al activar el usuario' })
   async activate(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    const payload = req.user as Payload;
+    const payload = req.user;
     const userId = payload.sub;
     return await this.usersService.activate(id, userId);
   }
@@ -106,9 +110,9 @@ export class UsersController {
   @ApiResponse({ status: 500, description: 'Error al desactivar el usuario' })
   async deactivate(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    const payload = req.user as Payload;
+    const payload = req.user;
     const userId = payload.sub;
     return await this.usersService.deactivate(id, userId);
   }
