@@ -12,19 +12,28 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { FindUsersDto } from '../dto/find-users.dto';
+import type { FindUsersDto } from '../dto/find-users.dto';
+import { UsersStateFilter } from '../dto/find-users.dto';
+import type { FindUserDto } from '../dto/find-user.dto';
+import { UserStateFilter } from '../dto/find-user.dto';
 import type { RequestWithUser } from 'src/auth/models/request.model';
-import { AbacGuard } from '../guards/abac.guard';
-import { Action, Resource } from '../abac/abac.types';
+import { AbacGuard } from '../../auth/guards/abac.guard';
+import { Action, Resource } from '../../auth/abac/abac.types';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { CheckPolicies } from 'src/auth/decorators/check-policies.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UserRole } from '../entities/user.entity';
 
-@UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
-@Roles(UserRole.ADMIN, UserRole.EDITOR)
-@CheckPolicies({ action: Action.UPDATE, resource: Resource.USER })
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
@@ -34,6 +43,9 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Usuario creado exitosamente' })
   @ApiResponse({ status: 409, description: 'El correo ya está en uso' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
@@ -47,15 +59,18 @@ export class UsersController {
   @ApiOperation({ summary: 'Obtener todos los usuarios' })
   @ApiResponse({ status: 200, description: 'Lista de todos los usuarios' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
-  @ApiQuery({ 
+  @ApiQuery({
     name: 'state',
     required: false,
     enum: UsersStateFilter,
     description: 'Filtrar por estado del usuario. Si se omite, el valor por defecto es ACTIVES.' 
   })
+  @UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Get()
-  async findAll(@Query() query: FindUsersDto) {
-    return await this.usersService.findAll(query.state);
+  async findAll(@Query('state') state?: UsersStateFilter) {
+    return await this.usersService.findAll(state || UsersStateFilter.ACTIVES);
   }
 
   @ApiOperation({ summary: 'Obtener un determinado usuario' })
@@ -63,18 +78,21 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'ID de usuario es requerido' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
-  @ApiQuery({ 
+  @ApiQuery({
     name: 'state',
     required: false,
-    enum: FindUserDto,
+    enum: UserStateFilter,
     description: 'Filtrar por estado del usuario. Si se omite, el valor por defecto es ACTIVE.' 
   })
+  @UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
+  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Get(':id')
   async findOne(
     @Param('id', new ParseUUIDPipe()) id: string,
-    Query() query: FindUserDto,
+    @Query('state') state?: UserStateFilter,
   ) {
-    return await this.usersService.findOne(id, query.state);
+    return await this.usersService.findOne(id, state || UserStateFilter.ACTIVE);
   }
 
   @ApiOperation({ summary: 'Actualizar un usuario' })

@@ -1,4 +1,12 @@
-import { BeforeInsert, Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 
@@ -73,7 +81,7 @@ export class User {
   deletedBy: string;
 
   @Column('text', { array: true, default: [UserRole.USER] })
-  role: UserRole[];
+  roles: UserRole[];
 
   // Antes de insertar un nuevo usuario en la base de datos, se ejecuta este método para hashear la contraseña antes de guardarla
   @BeforeInsert()

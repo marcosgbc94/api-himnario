@@ -1,6 +1,15 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CHECK_POLICIES_KEY, PolicyRequirement } from '../decorators/check-policies.decorator';
+import {
+  CHECK_POLICIES_KEY,
+  PolicyRequirement,
+} from '../decorators/check-policies.decorator';
 import { ABAC_POLICIES } from '../abac/policies';
 import { ModuleRef } from '@nestjs/core';
 
@@ -8,7 +17,7 @@ import { ModuleRef } from '@nestjs/core';
 export class AbacGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private moduleRef: ModuleRef // Permite buscar repositorios/servicios dinámicamente
+    private moduleRef: ModuleRef, // Permite buscar repositorios/servicios dinámicamente
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -50,18 +59,25 @@ export class AbacGuard implements CanActivate {
 
   // Método auxiliar para buscar el registro según el recurso solicitado
   private async fetchResource(resource: string, id: string) {
+    // CORTOCIRCUITO: Si el 'id' es undefined, null o un string vacío (flujos masivos/creación),
+    // no llamamos al servicio y devolvemos null inmediatamente.
+    if (!id) {
+      return null;
+    }
+
     try {
-      // Aquí mapeas dinámicamente al servicio o repositorio correspondiente
       if (resource === 'user') {
         // Buscamos el servicio de usuarios dinámicamente desde el contenedor de NestJS
         const usersService = this.moduleRef.get('UsersService', { strict: false });
+        
+        // Ahora es seguro llamarlo porque sabemos que 'id' tiene un valor real
         return await usersService.findOne(id);
       }
-      // Si añades himnos más adelante:
-      // if (resource === 'himno') { ... }
       return null;
-    } catch {
-      throw new NotFoundException('El recurso que intentas evaluar no existe');
+    } catch (error) {
+      // Si el usuario no existe en la BD o el id tiene un formato inválido,
+      // atrapamos el error para que la aplicación no explote con un 500
+      return null;
     }
   }
 }

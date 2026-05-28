@@ -42,8 +42,12 @@ export class AuthService {
   }
 
   // Genera un token JWT para el usuario autenticado
-  generateToken(userId: string): string {
-    const payload: Payload = { sub: userId };
+  generateToken(userId: string, email: string, roles: string[]): string {
+    const payload: Payload = {
+      sub: userId,
+      email: email,
+      roles: roles || [],
+    };
     return this.jwtService.sign(payload);
   }
 }

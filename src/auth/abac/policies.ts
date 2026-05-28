@@ -1,22 +1,29 @@
+import { UserRole } from 'src/users/entities/user.entity';
 import { Action, Resource, PolicyFn } from './abac.types';
 
-export const ABAC_POLICIES: Record<Resource, Partial<Record<Action, PolicyFn>>> = {
-  [Resource.HIMNO]: {
+export const ABAC_POLICIES: Record<
+  Resource,
+  Partial<Record<Action, PolicyFn>>
+> = {
+  [Resource.USER]: {
+    [Action.CREATE]: ({ user }) => {
+      return user.roles.includes('admin') || user.roles.includes('editor');
+    },
+    
+    [Action.READ]: ({ user, resource }) => {
+      // 💡 Como es un GET general, 'resource' viene null.
+      // Evaluamos puramente los atributos de quien hace la petición.
+      return user.roles.includes('admin') || user.roles.includes('editor');
+    },
+    
     [Action.UPDATE]: ({ user, resource }) => {
-      // 💡 REGLA ABAC: Verificamos si en su lista de roles tiene 'admin' o 'editor'
-      const hasPrivilegedRole = user.roles.some(role => 
-        role === UserRole.ADMIN || role === UserRole.EDITOR
-      );
-
-      if (hasPrivilegedRole) return true;
-
-      // Si no tiene esos roles, se aplica la regla de dueño del recurso
-      return resource.createdBy === user.sub;
+      if (user.roles.includes('admin')) return true;
+      // Aquí SÍ hay recurso porque el endpoint tiene un :id (ej: /users/:id)
+      return resource && user.sub === resource.id; 
     },
     
     [Action.DELETE]: ({ user }) => {
-      // Solo si el array contiene 'admin'
-      return user.roles.includes(UserRole.ADMIN);
+      return user.roles.includes('admin');
     },
   },
 };

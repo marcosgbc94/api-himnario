@@ -18,7 +18,11 @@ export class AuthController {
   @Post('login')
   login(@Body() loginDto: LoginDto, @Req() req: any) {
     const user = req.user as User;
-    const token = this.authService.generateToken(user.id);
+    const token = this.authService.generateToken(
+      user.id,
+      user.email,
+      user.roles,
+    );
     return { user, token };
   }
 }

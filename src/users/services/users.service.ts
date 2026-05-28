@@ -45,15 +45,13 @@ export class UsersService {
   // Método para obtener todos los usuarios
   async findAll(state: string) {
     try {
-      const whereCondition = {};
-
-      if (state === "ACTIVES") {
-        whereCondition.active = true;
-      } else if (state === "INACTIVES") {
-        whereCondition.active = false;
+      if (state === 'ACTIVES') {
+        return await this.usersRepository.find({ where: { active: true } });
+      } else if (state === 'INACTIVES') {
+        return await this.usersRepository.find({ where: { active: false } });
       }
 
-      return await this.usersRepository.find({ where: whereCondition });
+      return await this.usersRepository.find();
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -69,15 +67,23 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const whereCondition = { id };
-
-      if (state === "ACTIVE") {
-        whereCondition.active = true;
-      } else if (state === "INACTIVE") {
-        whereCondition.active = false;
+      if (state === 'ACTIVE') {
+        return await this.usersRepository.findOne({
+          where: {
+            id,
+            active: true,
+          },
+        });
+      } else if (state === 'INACTIVE') {
+        return await this.usersRepository.findOne({
+          where: {
+            id,
+            active: false,
+          },
+        });
       }
 
-      const user = await this.usersRepository.findOne({ where: whereCondition });
+      const user = await this.usersRepository.findOne({ where: { id } });
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -113,7 +119,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id, "ACTIVE");
+      const user = await this.findOne(id, 'ACTIVE');
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -139,7 +145,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id, "ACTIVE");
+      const user = await this.findOne(id, 'ACTIVE');
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -164,7 +170,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id, "ACTIVE");
+      const user = await this.findOne(id, 'ACTIVE');
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -189,7 +195,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.findOne(id, "ALL");
+      const user = await this.findOne(id, 'ALL');
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');

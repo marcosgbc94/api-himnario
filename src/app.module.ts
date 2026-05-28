@@ -20,7 +20,6 @@ import { EnvModel } from './models/env.model';
         synchronize: false,
       }),
       inject: [ConfigService],
-      AccessControlModule,
     }),
     UsersModule,
     AuthModule,
