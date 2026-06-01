@@ -11,12 +11,17 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
+import { AuthService } from '../../auth/services/auth.service';
+import { RoleSlug } from 'src/auth/models/role-slug.model';
+import { RoleSlugDto } from '../dto/role-slug.dto';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private authService: AuthService,
   ) {}
 
   // Método para crear un nuevo usuario
@@ -33,7 +38,13 @@ export class UsersService {
         createdBy: userId,
       });
 
-      return await this.usersRepository.save(userCreated);
+      const userCreatedResult = await this.usersRepository.save(userCreated);
+
+      if (!userCreatedResult) {
+        throw new InternalServerErrorException('Error al crear el usuario');
+      }
+
+      await this.authService.assignRole(userCreatedResult.id, RoleSlug.USER); // Asigna el rol de "user" al usuario creado
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -43,19 +54,27 @@ export class UsersService {
   }
 
   // Método para obtener todos los usuarios
-  async findAll(state: string) {
+  async findAll(state?: string, roleSlug: RoleSlugDto | undefined = undefined) {
     try {
+      const query = this.usersRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.userRoles', 'userRoles')
+        .leftJoinAndSelect('userRoles.role', 'role');
+
       if (state === 'ACTIVES') {
-        return await this.usersRepository.find({ where: { active: true } });
+        query.andWhere('user.active = :active', { active: true });
       } else if (state === 'INACTIVES') {
-        return await this.usersRepository.find({ where: { active: false } });
+        query.andWhere('user.active = :active', { active: false });
       }
 
-      return await this.usersRepository.find();
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
+      if (roleSlug) {
+        query.andWhere('role.slug = :slug', {
+          slug: roleSlug,
+        });
       }
+
+      return await query.getMany();
+    } catch {
       throw new InternalServerErrorException('Error al obtener los usuarios');
     }
   }
@@ -101,7 +120,13 @@ export class UsersService {
   // Método para obtener un usuario por su correo electrónico
   async findByEmail(email: string) {
     try {
-      return await this.usersRepository.findOneBy({ email, active: true });
+      return await this.usersRepository.findOne({
+        where: {
+          email,
+          active: true,
+        },
+        relations: ['userRoles', 'userRoles.role'],
+      });
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -189,25 +214,19 @@ export class UsersService {
   }
 
   // Método para eliminar un usuario (soft delete)
-  async remove(id: string, userId: string) {
+  @Transactional()
+  async remove(id: string, executorId: string) {
     try {
-      if (!id) {
-        throw new BadRequestException('ID de usuario es requerido');
-      }
-
-      const user = await this.findOne(id, 'ALL');
-
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado');
-      }
+      const user = await this.usersRepository.findOne({ where: { id } });
+      if (!user) throw new BadRequestException('Usuario no encontrado');
 
       user.active = false;
-      user.deletedBy = userId;
+      user.deletedBy = executorId;
 
       await this.usersRepository.save(user);
+      await this.usersRepository.softRemove(user);
 
-      // Aplica el soft remove para que TypeORM estampe la fecha en 'deleted_at'
-      return await this.usersRepository.softRemove(user);
+      await this.authService.deleteUserRoles(id);
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

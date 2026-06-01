@@ -1,5 +1,5 @@
-import { UserRole } from 'src/users/entities/user.entity';
 import { Action, Resource, PolicyFn } from './abac.types';
+import { RoleSlug } from '../models/role-slug.model';
 
 export const ABAC_POLICIES: Record<
   Resource,
@@ -7,23 +7,20 @@ export const ABAC_POLICIES: Record<
 > = {
   [Resource.USER]: {
     [Action.CREATE]: ({ user }) => {
-      return user.roles.includes('admin') || user.roles.includes('editor');
+      return user.roles.includes(RoleSlug.ADMIN) || user.roles.includes(RoleSlug.EDITOR);
     },
-    
-    [Action.READ]: ({ user, resource }) => {
-      // 💡 Como es un GET general, 'resource' viene null.
-      // Evaluamos puramente los atributos de quien hace la petición.
-      return user.roles.includes('admin') || user.roles.includes('editor');
+
+    [Action.READ]: ({ user }) => {
+      return user.roles.includes(RoleSlug.ADMIN) || user.roles.includes(RoleSlug.EDITOR);
     },
-    
+
     [Action.UPDATE]: ({ user, resource }) => {
-      if (user.roles.includes('admin')) return true;
-      // Aquí SÍ hay recurso porque el endpoint tiene un :id (ej: /users/:id)
+      if (user.roles.includes(RoleSlug.ADMIN)) return true;
       return resource && user.sub === resource.id; 
     },
-    
+
     [Action.DELETE]: ({ user }) => {
-      return user.roles.includes('admin');
+      return user.roles.includes(RoleSlug.ADMIN);
     },
   },
 };

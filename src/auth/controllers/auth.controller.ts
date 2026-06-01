@@ -2,9 +2,10 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '../services/auth.service';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import type { RequestWithUser } from '../models/request.model';
 import { LoginDto } from '../dto/login.dto';
 import { User } from 'src/users/entities/user.entity';
+import { UserLoginDto } from '../dto/user-login.dto';
+import { ClassConstructor, plainToInstance } from 'class-transformer';
 
 @Controller('auth')
 export class AuthController {
@@ -16,13 +17,20 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  login(@Body() loginDto: LoginDto, @Req() req: any) {
+  login(
+    @Body() loginDto: LoginDto,
+    @Req() req: any,
+  ): { user: UserLoginDto; token: string } {
     const user = req.user as User;
-    const token = this.authService.generateToken(
-      user.id,
-      user.email,
-      user.roles,
-    );
-    return { user, token };
+    const roles = user.userRoles?.map((userRole) => userRole.role.slug) || [];
+    const token = this.authService.generateToken(user.id, user.email, roles);
+
+    const userDto: UserLoginDto = {
+      id: user.id,
+      email: user.email,
+      roles: roles,
+    };
+
+    return { user: userDto, token };
   }
 }

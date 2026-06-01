@@ -9,9 +9,13 @@ export enum UserStateFilter {
 
 export class FindUserDto {
   @IsOptional()
-  @Transform(({ value }) => (value === undefined || value === '') ? 'ACTIVE' : value.toUpperCase())
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined || value === ''
+      ? 'ACTIVE'
+      : String(value).toUpperCase(),
+  )
   @IsIn(Object.values(UserStateFilter), {
-      message: 'El estado debe ser estrictamente: ACTIVE, INACTIVE o ALL'
+    message: 'El estado debe ser estrictamente: ACTIVE, INACTIVE o ALL',
   })
   state: string = 'ACTIVE';
 }

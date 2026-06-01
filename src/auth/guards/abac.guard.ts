@@ -12,6 +12,7 @@ import {
 } from '../decorators/check-policies.decorator';
 import { ABAC_POLICIES } from '../abac/policies';
 import { ModuleRef } from '@nestjs/core';
+import { Resource } from '../abac/abac.types';
 
 @Injectable()
 export class AbacGuard implements CanActivate {
@@ -20,63 +21,61 @@ export class AbacGuard implements CanActivate {
     private moduleRef: ModuleRef, // Permite buscar repositorios/servicios dinámicamente
   ) {}
 
+  // Intercepta cada petición HTTP antes de que llegue a tu controlador,
+  // decidiendo si el usuario tiene permiso para ejecutar la acción basándose en atributos (ABAC).
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // 1. Obtener la regla requerida desde el decorador
     const policyReq = this.reflector.get<PolicyRequirement>(
       CHECK_POLICIES_KEY,
       context.getHandler(),
     );
 
-    if (!policyReq) return true; // Si el endpoint no tiene el decorador, pasa libre
+    if (!policyReq) return true;
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user; // El usuario ya inyectado por tu JwtStrategy
-    const { id: resourceId } = request.params; // Captura el ID de la URL (ej: /users/:id)
+    const user = request.user;
+    const { id: resourceId } = request.params;
 
     if (!user) {
       throw new ForbiddenException('No autenticado para evaluar políticas.');
     }
 
-    // 2. Obtener la función de política correspondiente
     const policyFn = ABAC_POLICIES[policyReq.resource]?.[policyReq.action];
-    if (!policyFn) return true; // Si no hay regla estricta programada, por defecto pasa
+    if (!policyFn) return true;
 
-    // 3. Buscar el recurso real en la base de datos dinámicamente para evaluar sus atributos
     let resourceEntity = null;
     if (resourceId) {
       resourceEntity = await this.fetchResource(policyReq.resource, resourceId);
     }
 
-    // 4. Evaluar la regla ABAC
     const isAllowed = policyFn({ user, resource: resourceEntity });
 
     if (!isAllowed) {
-      throw new ForbiddenException('No tienes los atributos necesarios para realizar esta acción');
+      throw new ForbiddenException(
+        'No tienes los atributos necesarios para realizar esta acción',
+      );
     }
 
     return true;
   }
 
   // Método auxiliar para buscar el registro según el recurso solicitado
-  private async fetchResource(resource: string, id: string) {
-    // CORTOCIRCUITO: Si el 'id' es undefined, null o un string vacío (flujos masivos/creación),
-    // no llamamos al servicio y devolvemos null inmediatamente.
+  private async fetchResource(
+    resource: Resource,
+    id: string,
+  ): Promise<any | null> {
     if (!id) {
       return null;
     }
 
     try {
-      if (resource === 'user') {
-        // Buscamos el servicio de usuarios dinámicamente desde el contenedor de NestJS
+      if (resource === Resource.USER) {
         const usersService = this.moduleRef.get('UsersService', { strict: false });
-        
-        // Ahora es seguro llamarlo porque sabemos que 'id' tiene un valor real
+
         return await usersService.findOne(id);
       }
+
       return null;
-    } catch (error) {
-      // Si el usuario no existe en la BD o el id tiene un formato inválido,
-      // atrapamos el error para que la aplicación no explote con un 500
+    } catch {
       return null;
     }
   }

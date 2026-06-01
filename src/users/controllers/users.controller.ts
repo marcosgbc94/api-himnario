@@ -22,17 +22,16 @@ import {
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import type { FindUsersDto } from '../dto/find-users.dto';
 import { UsersStateFilter } from '../dto/find-users.dto';
-import type { FindUserDto } from '../dto/find-user.dto';
 import { UserStateFilter } from '../dto/find-user.dto';
 import type { RequestWithUser } from 'src/auth/models/request.model';
 import { AbacGuard } from '../../auth/guards/abac.guard';
 import { Action, Resource } from '../../auth/abac/abac.types';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { CheckPolicies } from 'src/auth/decorators/check-policies.decorator';
-import { Roles } from 'src/auth/decorators/roles.decorator';
-import { UserRole } from '../entities/user.entity';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { CheckPolicies } from '../../auth/decorators/check-policies.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { RoleSlug } from '../../auth/models/role-slug.model';
+import { RoleSlugDto } from '../dto/role-slug.dto';
 
 @ApiBearerAuth()
 @Controller('users')
@@ -42,9 +41,9 @@ export class UsersController {
   @ApiOperation({ summary: 'Crear un nuevo usuario' })
   @ApiResponse({ status: 201, description: 'Usuario creado exitosamente' })
   @ApiResponse({ status: 409, description: 'El correo ya está en uso' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
+  @ApiResponse({ status: 500, description: 'Error al crear el usuario' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR)
   @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Post()
   async create(
@@ -65,12 +64,24 @@ export class UsersController {
     enum: UsersStateFilter,
     description: 'Filtrar por estado del usuario. Si se omite, el valor por defecto es ACTIVES.' 
   })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    enum: RoleSlug,
+    description: 'Filtrar por rol del usuario.',
+  })
   @UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR)
   @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Get()
-  async findAll(@Query('state') state?: UsersStateFilter) {
-    return await this.usersService.findAll(state || UsersStateFilter.ACTIVES);
+  async findAll(
+    @Query('state') state?: UsersStateFilter,
+    @Query('role') role?: RoleSlugDto,
+  ) {
+    return await this.usersService.findAll(
+      state || UsersStateFilter.ACTIVES,
+      role || undefined,
+    );
   }
 
   @ApiOperation({ summary: 'Obtener un determinado usuario' })
@@ -85,7 +96,7 @@ export class UsersController {
     description: 'Filtrar por estado del usuario. Si se omite, el valor por defecto es ACTIVE.' 
   })
   @UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR)
   @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Get(':id')
   async findOne(
