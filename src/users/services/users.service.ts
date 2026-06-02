@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
-import { Transactional } from 'typeorm-transactional';
 import { AuthService } from 'src/auth/services/auth.service';
 import { RoleSlugEnum } from 'src/auth/enums/role-slug.enum';
 
@@ -50,11 +50,9 @@ export class UsersService {
   // Método para obtener todos los usuarios
   async findAll() {
     try {
-      return await this.usersRepository.find({ where: { active: true } });
+      return await this.usersRepository.find({ where: { active: true }, relations: { roles: true } });
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al obtener los usuarios');
     }
   }
@@ -66,7 +64,7 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.usersRepository.findOneBy({ id, active: true });
+      const user = await this.usersRepository.findOne({ where: { id, active: true }, relations: { roles: true } });
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -74,9 +72,7 @@ export class UsersService {
 
       return user;
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al obtener el usuario');
     }
   }
@@ -84,11 +80,15 @@ export class UsersService {
   // Método para obtener un usuario por su correo electrónico
   async findByEmail(email: string) {
     try {
-      return await this.usersRepository.findOneBy({ email, active: true });
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
+      const user = await this.usersRepository.findOneBy({ email, active: true });
+
+      if (!user) {
+        throw new UnauthorizedException('Usuario no autorizado');
       }
+
+      return user;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         'Error al obtener el usuario por correo electrónico',
       );
@@ -98,25 +98,14 @@ export class UsersService {
   // Método para actualizar un usuario
   async update(id: string, updateUserDto: UpdateUserDto, userId: string) {
     try {
-      if (!id) {
-        throw new BadRequestException('ID de usuario es requerido');
-      }
-
       const user = await this.findOne(id);
-
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado');
-      }
-
       const userUpdated = this.usersRepository.merge(user, updateUserDto);
 
       userUpdated.updatedBy = userId;
 
       return await this.usersRepository.save(userUpdated);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al actualizar el usuario');
     }
   }
@@ -124,24 +113,14 @@ export class UsersService {
   // Método para activar un usuario
   async activate(id: string, userId: string) {
     try {
-      if (!id) {
-        throw new BadRequestException('ID de usuario es requerido');
-      }
-
       const user = await this.findOne(id);
-
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado');
-      }
 
       user.active = true;
       user.updatedBy = userId;
 
       return await this.usersRepository.save(user);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al activar el usuario');
     }
   }
@@ -149,40 +128,23 @@ export class UsersService {
   // Método para desactivar un usuario
   async deactivate(id: string, userId: string) {
     try {
-      if (!id) {
-        throw new BadRequestException('ID de usuario es requerido');
-      }
-
       const user = await this.findOne(id);
-
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado');
-      }
 
       user.active = false;
       user.updatedBy = userId;
 
       return await this.usersRepository.save(user);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al desactivar el usuario');
     }
   }
 
   // Método para eliminar un usuario (soft delete)
+  @Transactional()
   async remove(id: string, userId: string) {
     try {
-      if (!id) {
-        throw new BadRequestException('ID de usuario es requerido');
-      }
-
       const user = await this.findOne(id);
-
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado');
-      }
 
       user.active = false;
       user.deletedBy = userId;
@@ -192,9 +154,7 @@ export class UsersService {
       // Aplica el soft remove para que TypeORM estampe la fecha en 'deleted_at'
       return await this.usersRepository.softRemove(user);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al eliminar el usuario');
     }
   }
