@@ -10,8 +10,9 @@ export const ABAC_POLICIES: Record<
       return user.roles.includes(RoleSlug.ADMIN) || user.roles.includes(RoleSlug.EDITOR);
     },
 
-    [Action.READ]: ({ user }) => {
-      return user.roles.includes(RoleSlug.ADMIN) || user.roles.includes(RoleSlug.EDITOR);
+    [Action.READ]: ({ user, resource }) => {
+      if (user.sub === resource.id) return true;
+      return user.roles.includes(RoleSlug.ADMIN) || user.roles.includes(RoleSlug.EDITOR) || user.roles.includes(RoleSlug.USER);
     },
 
     [Action.UPDATE]: ({ user, resource }) => {

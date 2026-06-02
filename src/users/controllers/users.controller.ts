@@ -44,7 +44,7 @@ export class UsersController {
   @ApiResponse({ status: 500, description: 'Error al crear el usuario' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR)
-  @CheckPolicies({ action: Action.READ, resource: Resource.USER })
+  @CheckPolicies({ action: Action.CREATE, resource: Resource.USER })
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
@@ -71,7 +71,7 @@ export class UsersController {
     description: 'Filtrar por rol del usuario.',
   })
   @UseGuards(AuthGuard('jwt'), RolesGuard, AbacGuard)
-  @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR)
+  @Roles(RoleSlug.ADMIN, RoleSlug.EDITOR, RoleSlug.USER)
   @CheckPolicies({ action: Action.READ, resource: Resource.USER })
   @Get()
   async findAll(
