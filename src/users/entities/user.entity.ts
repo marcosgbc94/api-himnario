@@ -1,6 +1,7 @@
-import { BeforeInsert, Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BeforeInsert, Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from 'src/auth/entities/user-role.entity';
 
 @Entity({
   name: 'users',
@@ -40,7 +41,6 @@ export class User {
 
   @UpdateDateColumn({
     type: 'timestamp',
-    nullable: true,
     name: 'updated_at',
   })
   updatedAt: Date;
@@ -54,7 +54,6 @@ export class User {
 
   @DeleteDateColumn({
     type: 'timestamp',
-    nullable: true,
     name: 'deleted_at',
   })
   deletedAt: Date;
@@ -65,6 +64,9 @@ export class User {
     name: 'deleted_by',
   })
   deletedBy: string;
+
+  @OneToMany(() => UserRole, (userRole) => userRole.user)
+  userRoles: UserRole[];
 
   // Antes de insertar un nuevo usuario en la base de datos, se ejecuta este método para hashear la contraseña antes de guardarla
   @BeforeInsert()

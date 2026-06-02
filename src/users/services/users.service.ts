@@ -11,15 +11,20 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
+import { Transactional } from 'typeorm-transactional';
+import { AuthService } from 'src/auth/services/auth.service';
+import { RoleSlugEnum } from 'src/auth/enums/role-slug.enum';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private authService: AuthService,
   ) {}
 
-  // Método para crear un nuevo usuario
+  // Método para crear un nuevo usuario con rol de usuario por defecto
+  @Transactional()
   async create(createUserDto: CreateUserDto, userId: string) {
     try {
       const emailExists = await this.findByEmail(createUserDto.email);
@@ -33,11 +38,11 @@ export class UsersService {
         createdBy: userId,
       });
 
-      return await this.usersRepository.save(userCreated);
+      await this.usersRepository.save(userCreated);
+
+      return this.authService.assignRole(userCreated.id, RoleSlugEnum.USER);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al crear el usuario');
     }
   }
