@@ -1,7 +1,11 @@
 import {
+  BadRequestException,
+  forwardRef,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,14 +13,16 @@ import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { UsersService } from 'src/users/services/users.service';
+import { UsersService } from '../../users/services/users.service';
 import { Payload } from '../models/payload.model';
 import { Role } from '../entities/role.entity';
 import { UserRole } from '../entities/user-role.entity';
+import { RoleSlugEnum } from '../enums/role-slug.enum';
 
 @Injectable()
 export class AuthService {
   constructor(
+    @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
     private jwtService: JwtService,
     @InjectRepository(Role)
@@ -37,7 +43,7 @@ export class AuthService {
 
       return user;
     } catch (error) {
-      if (error instanceof HttpException) if (error instanceof HttpException) throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al validar el usuario');
     }
   }
@@ -49,9 +55,11 @@ export class AuthService {
   }
 
   // Obtiene un determinado Role por medio de su slug
-  async getRoleBySlug(slug: string) {
+  async getRoleBySlug(slug: RoleSlugEnum) {
     try {
-      const role = await this.roleRepository.findOne({ where: { slug: slug, active: true } });
+      const role = await this.roleRepository.findOne({
+        where: { slug: slug, active: true },
+      });
 
       if (!role) {
         throw new NotFoundException('Rol no encontrado');
@@ -59,13 +67,13 @@ export class AuthService {
 
       return role;
     } catch (error) {
-      if (error instanceof HttpException) if (error instanceof HttpException) throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al obtener el rol');
     }
   }
 
   // Asigna un rol a un determinado usuario
-  async assignRole(userId: string, roleSlug: string) {
+  async assignRole(userId: string, roleSlug: RoleSlugEnum) {
     try {
       const userFinded = await this.usersService.findOne(userId);
       const roleFinded = await this.getRoleBySlug(roleSlug);
@@ -82,18 +90,22 @@ export class AuthService {
   }
 
   // Busca un determino rol asignado a un determinado usuario
-  async getUserRole(userId: string, roleSlug: string = '', active: boolean = true) {
-      try {
-        const userFound = await this.usersService.findOne(userId);
-        const roleFound = await this.getRoleBySlug(roleSlug);
+  async getUserRole(
+    userId: string,
+    roleSlug: RoleSlugEnum = RoleSlugEnum.USER,
+    active: boolean = true,
+  ) {
+    try {
+      const userFound = await this.usersService.findOne(userId);
+      const roleFound = await this.getRoleBySlug(roleSlug);
 
-        return await this.userRoleRepository.findOne({
-          where: { userId: userFound.id, roleId: roleFound.id, active: active }
-        });
-      } catch (error) {
-        if (error instanceof HttpException) throw error;
-        throw new InternalServerErrorException('Error al buscar el rol');
-      }
+      return await this.userRoleRepository.findOne({
+        where: { userId: userFound.id, roleId: roleFound.id, active: active }
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Error al buscar el rol');
+    }
   }
 
   // Busca todos los roles asignados a un terminado usuario
@@ -103,11 +115,11 @@ export class AuthService {
 
       const userRole = await this.userRoleRepository.find({
         where: { userId: userFound.id, active: active },
-        relations: { role: true }
+        relations: { role: true },
       });
 
       if (!userRole) {
-        NotFoundException('Rol de usuario no encontrado');
+        throw new NotFoundException('Rol de usuario no encontrado');
       }
 
       return userRole;
@@ -118,10 +130,14 @@ export class AuthService {
 }
 
   // Quita un rol específico a un determinado usuario
-  async unassignRole(userId: string, roleSlug: string, executorId: string) {
+  async unassignRole(
+    userId: string,
+    roleSlug: RoleSlugEnum,
+    executorId: string,
+  ) {
     try {
       const userRole = await this.getUserRole(userId, roleSlug);
-  
+
       if (!userRole) {
         throw new BadRequestException(
           'El usuario no tiene asignado este rol o ya fue desasignado'
@@ -143,14 +159,20 @@ export class AuthService {
   // Quita todos los roles de un determinado usuario
   async unassignRoles(userId: string, executorId: string) {
     try {
-      const userRoles = await this.getUserRole(userId);
+      const userRoles = await this.getUserRoles(userId);
+
+      if (!userRoles) {
+        throw new BadRequestException(
+          'El usuario no tiene asignado ningun rol o ya fue desasignado',
+        );
+      }
 
       const updatedUserRoles = userRoles.map((userRole) => {
         userRole.active = false;
         userRole.deletedBy = executorId;
         return userRole;
       });
-    
+
       return await this.userRoleRepository.softRemove(updatedUserRoles);
     } catch (error) {
       if (error instanceof HttpException) throw error;

@@ -1,9 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,14 +15,15 @@ import { Transactional } from 'typeorm-transactional';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
-import { AuthService } from 'src/auth/services/auth.service';
-import { RoleSlugEnum } from 'src/auth/enums/role-slug.enum';
+import { AuthService } from '../../auth/services/auth.service';
+import { RoleSlugEnum } from '../../auth/enums/role-slug.enum';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => AuthService))
     private authService: AuthService,
   ) {}
 
@@ -50,7 +54,10 @@ export class UsersService {
   // Método para obtener todos los usuarios
   async findAll() {
     try {
-      return await this.usersRepository.find({ where: { active: true }, relations: { roles: true } });
+      return await this.usersRepository.find({
+        where: { active: true },
+        relations: { userRoles: true },
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al obtener los usuarios');
@@ -64,7 +71,10 @@ export class UsersService {
         throw new BadRequestException('ID de usuario es requerido');
       }
 
-      const user = await this.usersRepository.findOne({ where: { id, active: true }, relations: { roles: true } });
+      const user = await this.usersRepository.findOne({
+        where: { id, active: true },
+        relations: { userRoles: true },
+      });
 
       if (!user) {
         throw new BadRequestException('Usuario no encontrado');
@@ -80,7 +90,10 @@ export class UsersService {
   // Método para obtener un usuario por su correo electrónico
   async findByEmail(email: string) {
     try {
-      const user = await this.usersRepository.findOneBy({ email, active: true });
+      const user = await this.usersRepository.findOneBy({
+        email,
+        active: true,
+      });
 
       if (!user) {
         throw new UnauthorizedException('Usuario no autorizado');

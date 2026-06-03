@@ -17,9 +17,9 @@ import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import type { RequestWithUser } from 'src/auth/models/request.model';
-import { RolesGuard } from 'src/auth/guards/role.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
-import { RoleSlugEnum } from 'src/auth/enums/role-slug.enum';
+import { RolesGuard } from '../../auth/guards/role.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { RoleSlugEnum } from '../../auth/enums/role-slug.enum';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
