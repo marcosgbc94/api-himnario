@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  forwardRef,
   HttpException,
   Inject,
   Injectable,
@@ -15,16 +14,16 @@ import { Transactional } from 'typeorm-transactional';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { User } from '../entities/user.entity';
-import { AuthService } from '../../auth/services/auth.service';
-import { RoleSlugEnum } from '../../auth/enums/role-slug.enum';
+import { RolesService } from '../../roles/services/roles.service';
+import { RoleSlugEnum } from '../../roles/enums/role-slug.enum';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    @Inject(forwardRef(() => AuthService))
-    private authService: AuthService,
+    @Inject(RolesService)
+    private rolesService: RolesService,
   ) {}
 
   // Método para crear un nuevo usuario con rol de usuario por defecto
@@ -44,7 +43,7 @@ export class UsersService {
 
       await this.usersRepository.save(userCreated);
 
-      return this.authService.assignRole(userCreated.id, RoleSlugEnum.USER);
+      return this.rolesService.assignRole(userCreated.id, RoleSlugEnum.USER, userId);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al crear el usuario');

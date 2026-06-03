@@ -12,7 +12,10 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
     });
   }
 
-  async validate(email: string, password: string) {
-    return await this.authService.validateUser(email, password);
+  async validate(email: string, password: string, req: Request) {
+    const ip = (req.headers['x-forwarded-for'] as string) || req.ip || '';
+    const url = req.url;
+
+    return await this.authService.validateUser(email, password, ip, url);
   }
 }

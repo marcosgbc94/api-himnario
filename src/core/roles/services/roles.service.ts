@@ -1,58 +1,28 @@
 import {
   BadRequestException,
-  forwardRef,
+  ConflictException,
   HttpException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Role } from "../entities/role.entity";
+import { UserRole } from "../entities/user-role.entity";
+import { RoleSlugEnum } from "../enums/role-slug.enum";
 import { UsersService } from '../../users/services/users.service';
-import { Payload } from '../models/payload.model';
-import { Role } from '../entities/role.entity';
-import { UserRole } from '../entities/user-role.entity';
-import { RoleSlugEnum } from '../enums/role-slug.enum';
 
 @Injectable()
-export class AuthService {
+export class RolesService {
   constructor(
-    @Inject(forwardRef(() => UsersService))
-    private usersService: UsersService,
-    private jwtService: JwtService,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     @InjectRepository(UserRole)
     private userRoleRepository: Repository<UserRole>,
+    private userService: UsersService,
   ) {}
-
-  // Valida un usuario comparando el email y la contraseña con los datos almacenados en la base de datos
-  async validateUser(email: string, password: string) {
-    try {
-      const user = await this.usersService.findByEmail(email);
-      const isMatch = await bcrypt.compare(password, user.password);
-
-      if (!isMatch) {
-        throw new UnauthorizedException('Usuario no autorizado');
-      }
-
-      return user;
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al validar el usuario');
-    }
-  }
-
-  // Genera un token JWT para el usuario autenticado
-  generateToken(userId: string): string {
-    const payload: Payload = { sub: userId };
-    return this.jwtService.sign(payload);
-  }
 
   // Obtiene un determinado Role por medio de su slug
   async getRoleBySlug(slug: RoleSlugEnum) {
@@ -73,18 +43,26 @@ export class AuthService {
   }
 
   // Asigna un rol a un determinado usuario
-  async assignRole(userId: string, roleSlug: RoleSlugEnum) {
+  async assignRole(userId: string, roleSlug: RoleSlugEnum, executorId: string) {
     try {
-      const userFinded = await this.usersService.findOne(userId);
-      const roleFinded = await this.getRoleBySlug(roleSlug);
+      const userRole = await this.getUserRole(userId, roleSlug);
 
-      const newUserRole = this.roleRepository.merge(roleFinded, {
-        userRoles: [{ user: userFinded }],
+      if (!userRole) {
+        throw new ConflictException(`El usuario ya tiene asignado el rol [${roleSlug}]`);
+      }
+
+      const user = await this.userService.findOne(userId);
+      const role = await this.getRoleBySlug(roleSlug);
+      
+      const newUserRole = this.userRoleRepository.create({
+        user: user,
+        role: role,
+        createdBy: executorId,
       });
 
       return await this.roleRepository.save(newUserRole);
     } catch (error) {
-      if (error instanceof HttpException) if (error instanceof HttpException) throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al asignar el rol');
     }
   }
@@ -96,7 +74,7 @@ export class AuthService {
     active: boolean = true,
   ) {
     try {
-      const userFound = await this.usersService.findOne(userId);
+      const userFound = await this.userService.findOne(userId);
       const roleFound = await this.getRoleBySlug(roleSlug);
 
       return await this.userRoleRepository.findOne({
@@ -111,7 +89,7 @@ export class AuthService {
   // Busca todos los roles asignados a un terminado usuario
   async getUserRoles(userId: string, active: boolean = true) {
     try {
-      const userFound = await this.usersService.findOne(userId);
+      const userFound = await this.userService.findOne(userId);
 
       const userRole = await this.userRoleRepository.find({
         where: { userId: userFound.id, active: active },
@@ -127,7 +105,7 @@ export class AuthService {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al buscar el rol');
     }
-}
+  }
 
   // Quita un rol específico a un determinado usuario
   async unassignRole(
@@ -146,7 +124,7 @@ export class AuthService {
 
       userRole.active = false;
       userRole.deletedBy = executorId;
- 
+
       await this.userRoleRepository.save(userRole);
 
       return await this.userRoleRepository.softRemove(userRole);

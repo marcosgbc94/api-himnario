@@ -3,8 +3,8 @@ import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { AppModule } from '../../app.module';
-import { Role } from '../../auth/entities/role.entity';
-import { RoleSlugEnum } from '../../auth/enums/role-slug.enum';
+import { Role } from '../../core/roles/entities/role.entity';
+import { RoleSlugEnum } from '../../core/roles/enums/role-slug.enum';
 
 async function run() {
   const app = await NestFactory.createApplicationContext(AppModule);

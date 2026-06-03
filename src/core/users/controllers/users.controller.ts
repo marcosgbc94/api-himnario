@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Put,
+  Patch,
   Param,
   Delete,
   ParseUUIDPipe,
@@ -16,10 +17,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import type { RequestWithUser } from 'src/auth/models/request.model';
-import { RolesGuard } from '../../auth/guards/role.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { RoleSlugEnum } from '../../auth/enums/role-slug.enum';
+import type { RequestWithUser } from 'src/core/auth/models/request.model';
+import { RolesGuard } from '../../roles/guards/role.guard';
+import { Roles } from '../../roles/decorators/roles.decorator';
+import { RoleSlugEnum } from '../../roles/enums/role-slug.enum';
+import { AuditAction } from '../../audit/decorators/audit.decorator';
+import { AuditActionEnum } from '../../audit/enums/AuditAction.enum';
 
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
@@ -32,6 +35,7 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'El correo ya está en uso' })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
   @Roles(RoleSlugEnum.ADMIN, RoleSlugEnum.USER)
+  @AuditAction(AuditActionEnum.USER_CREATE)
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
@@ -70,6 +74,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
   @Roles(RoleSlugEnum.ADMIN, RoleSlugEnum.USER)
+  @AuditAction(AuditActionEnum.USER_UPDATE)
   @Put(':id')
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -87,6 +92,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 500, description: 'Error al eliminar el usuario' })
   @Roles(RoleSlugEnum.ADMIN)
+  @AuditAction(AuditActionEnum.USER_DELETE)
   @Delete(':id')
   async remove(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -102,14 +108,16 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'ID de usuario es requerido' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 500, description: 'Error al activar el usuario' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleSlugEnum.ADMIN)
+  @AuditAction(AuditActionEnum.USER_ACTIVE)
+  @Patch('activate/:userId')
   async activate(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
     @Req() req: RequestWithUser,
   ) {
-    const payload = req.user;
-    const userId = payload.sub;
-    return await this.usersService.activate(id, userId);
+    const executorId = req.user.sub;
+    return await this.usersService.activate(userId, executorId);
   }
 
   @ApiOperation({ summary: 'Desactivar un usuario' })
@@ -117,13 +125,15 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'ID de usuario es requerido' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 500, description: 'Error al desactivar el usuario' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(RoleSlugEnum.ADMIN)
+  @AuditAction(AuditActionEnum.USER_DEACTIVE)
+  @Patch('deactivate/:userId')
   async deactivate(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
     @Req() req: RequestWithUser,
   ) {
-    const payload = req.user;
-    const userId = payload.sub;
-    return await this.usersService.deactivate(id, userId);
+    const executorId = req.user.sub;
+    return await this.usersService.deactivate(userId, executorId);
   }
 }
