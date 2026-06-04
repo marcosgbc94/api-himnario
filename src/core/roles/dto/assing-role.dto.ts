@@ -1,5 +1,5 @@
-import { RoleSlugEnum } from "../enums/role-slug.enum";
+import { RoleSlugEnum } from '../enums/role-slug.enum';
 
-export class AssingRoleDTO {
-    roleSlug: RoleSlugEnum;
+export class AssignRoleDTO {
+  roleSlug!: RoleSlugEnum;
 }

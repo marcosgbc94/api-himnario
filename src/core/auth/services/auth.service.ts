@@ -20,7 +20,7 @@ export class AuthService {
     private auditService: AuditService,
   ) {}
 
-  // Valida un usuario comparando el email y la contraseña con los 
+  // Valida un usuario comparando el email y la contraseña con los
   // datos almacenados en la base de datos
   async validateUser(email: string, password: string, ip: string, url: string) {
     try {

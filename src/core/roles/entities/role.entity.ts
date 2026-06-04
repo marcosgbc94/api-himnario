@@ -5,17 +5,17 @@ import { RoleSlugEnum } from '../enums/role-slug.enum';
 @Entity('roles')
 export class Role {
   @PrimaryGeneratedColumn('increment')
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', unique: true })
-  name: string;
+  name!: string;
 
   @Column({ type: 'enum', enum: RoleSlugEnum, unique: true })
-  slug: RoleSlugEnum;
+  slug!: RoleSlugEnum;
 
   @Column({ type: 'boolean', default: true })
-  active: boolean;
+  active!: boolean;
 
   @OneToMany(() => UserRole, (userRole) => userRole.role)
-  userRoles: UserRole[];
+  userRoles!: UserRole[];
 }

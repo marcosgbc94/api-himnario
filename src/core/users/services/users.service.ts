@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
   HttpException,
   Inject,
   Injectable,
@@ -22,7 +23,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    @Inject(RolesService)
+    @Inject(forwardRef(() => RolesService))
     private rolesService: RolesService,
   ) {}
 
@@ -43,7 +44,11 @@ export class UsersService {
 
       await this.usersRepository.save(userCreated);
 
-      return this.rolesService.assignRole(userCreated.id, RoleSlugEnum.USER, userId);
+      return this.rolesService.assignRole(
+        userCreated.id,
+        RoleSlugEnum.USER,
+        userId,
+      );
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al crear el usuario');

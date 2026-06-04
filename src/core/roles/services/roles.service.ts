@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -9,9 +11,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Role } from "../entities/role.entity";
-import { UserRole } from "../entities/user-role.entity";
-import { RoleSlugEnum } from "../enums/role-slug.enum";
+import { Role } from '../entities/role.entity';
+import { UserRole } from '../entities/user-role.entity';
+import { RoleSlugEnum } from '../enums/role-slug.enum';
 import { UsersService } from '../../users/services/users.service';
 
 @Injectable()
@@ -21,6 +23,7 @@ export class RolesService {
     private roleRepository: Repository<Role>,
     @InjectRepository(UserRole)
     private userRoleRepository: Repository<UserRole>,
+    @Inject(forwardRef(() => UsersService))
     private userService: UsersService,
   ) {}
 
@@ -48,19 +51,21 @@ export class RolesService {
       const userRole = await this.getUserRole(userId, roleSlug);
 
       if (!userRole) {
-        throw new ConflictException(`El usuario ya tiene asignado el rol [${roleSlug}]`);
+        throw new ConflictException(
+          `El usuario ya tiene asignado el rol [${roleSlug}]`,
+        );
       }
 
       const user = await this.userService.findOne(userId);
       const role = await this.getRoleBySlug(roleSlug);
-      
+
       const newUserRole = this.userRoleRepository.create({
         user: user,
         role: role,
         createdBy: executorId,
       });
 
-      return await this.roleRepository.save(newUserRole);
+      return await this.userRoleRepository.save(newUserRole);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al asignar el rol');
@@ -78,7 +83,7 @@ export class RolesService {
       const roleFound = await this.getRoleBySlug(roleSlug);
 
       return await this.userRoleRepository.findOne({
-        where: { userId: userFound.id, roleId: roleFound.id, active: active }
+        where: { userId: userFound.id, roleId: roleFound.id, active: active },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -118,7 +123,7 @@ export class RolesService {
 
       if (!userRole) {
         throw new BadRequestException(
-          'El usuario no tiene asignado este rol o ya fue desasignado'
+          'El usuario no tiene asignado este rol o ya fue desasignado',
         );
       }
 

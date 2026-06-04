@@ -23,7 +23,9 @@
     "migrations:show": "npm run typeorm migration:show",
     "migrations:create": "typeorm-ts-node-commonjs migration:create",
     "migrations:run": "npm run typeorm migration:run",
-    "seed:roles": "ts-node src/database/seeds/roles.seed.ts"
+    "seed:roles": "ts-node src/database/seeds/roles.seed.ts",
+    "seed:user-admin": "ts-node src/database/seeds/user-admin.seed.ts",
+    "seed:user-role-admin": "ts-node src/database/seeds/user-role-admin.seed.ts"
   },
   "dependencies": {
     "@as-integrations/express5": "^1.1.2",

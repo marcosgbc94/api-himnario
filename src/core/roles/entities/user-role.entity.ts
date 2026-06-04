@@ -15,60 +15,60 @@ import { Role } from './role.entity';
 @Entity('user_roles')
 export class UserRole {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid' })
-  userId: string;
+  userId!: string;
 
   @Column({ type: 'integer' })
-  roleId: number;
+  roleId!: number;
 
   @Column({ type: 'boolean', default: true })
-  active: boolean;
+  active!: boolean;
 
   @CreateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
     name: 'created_at',
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @Column({ type: 'uuid', nullable: true, name: 'created_by' })
-  createdBy: string;
+  createdBy!: string;
 
   @UpdateDateColumn({
     type: 'timestamp',
     nullable: true,
     name: 'updated_at',
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'updated_by',
   })
-  updatedBy: string;
+  updatedBy!: string;
 
   @DeleteDateColumn({
     type: 'timestamp',
     nullable: true,
     name: 'deleted_at',
   })
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'deleted_by',
   })
-  deletedBy: string;
+  deletedBy!: string;
 
   @ManyToOne(() => User, (user) => user.userRoles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user!: User;
 
   @ManyToOne(() => Role, (role) => role.userRoles)
   @JoinColumn({ name: 'roleId' })
-  role: Role;
+  role!: Role;
 }
