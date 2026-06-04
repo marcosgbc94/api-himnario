@@ -48,7 +48,7 @@ export class UsersController {
 
   @ApiOperation({ summary: 'Obtener todos los usuarios' })
   @ApiResponse({ status: 200, description: 'Lista de todos los usuarios' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
+  @ApiResponse({ status: 500, description: 'Error al obtener los usuarios' })
   @Roles(RoleSlugEnum.ADMIN)
   @Get()
   async findAll() {
@@ -59,7 +59,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Usuario encontrado' })
   @ApiResponse({ status: 400, description: 'ID de usuario es requerido' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-  @ApiResponse({ status: 500, description: 'Error al actualizar el usuario' })
+  @ApiResponse({ status: 500, description: 'Error al obtener el usuario' })
   @Roles(RoleSlugEnum.ADMIN, RoleSlugEnum.USER)
   @Get(':id')
   async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
