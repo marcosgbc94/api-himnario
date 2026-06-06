@@ -6,6 +6,7 @@ import { UsersModule } from './core/users/users.module';
 import { AuthModule } from './core/auth/auth.module';
 import { EnvModel } from './models/env.model';
 import { RolesModule } from './core/roles/roles.module';
+import { SongsModule } from './modules/songs/songs.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { RolesModule } from './core/roles/roles.module';
     UsersModule,
     AuthModule,
     RolesModule,
+    SongsModule,
   ],
 })
 export class AppModule {}

@@ -7,8 +7,10 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
-import { SongType } from './song-type.entity'; 
+import { SongType } from './song-type.entity';
+import { SongSlide } from './song-slide.entity';
 
 @Entity({
   name: 'songs',
@@ -25,7 +27,7 @@ export class Song {
   title!: string;
 
   @Column({ type: 'varchar', length: 512, nullable: true, name: 'summary' })
-  summary?: string; 
+  summary?: string;
 
   @Column({ type: 'boolean', default: true })
   active!: boolean;

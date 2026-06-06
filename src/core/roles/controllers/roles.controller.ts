@@ -51,7 +51,7 @@ export class RolesController {
     return this.rolesService.assignRole(userId, body.roleSlug, executorId);
   }
 
-  @ApiOperation({ summary: 'Desasigna un rol a un usuario determinado' })
+  @ApiOperation({ summary: 'Quita un rol a un usuario determinado' })
   @ApiResponse({ status: 200, description: 'Rol fue desasignado con éxito' })
   @ApiResponse({
     status: 409,

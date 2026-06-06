@@ -1,12 +1,8 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Song } from './song.entity';
 
 @Entity({
-  name: 'song_types'
+  name: 'song_types',
 })
 export class SongType {
   @PrimaryGeneratedColumn('uuid')

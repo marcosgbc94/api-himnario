@@ -1,5 +1,16 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { SongSlide } from './song-slide.entity';
+
 @Entity({
-    name: 'slide'
+  name: 'slide',
 })
 export class Slide {
   @PrimaryGeneratedColumn('uuid')
@@ -32,19 +43,19 @@ export class Slide {
 
   @CreateDateColumn({
     type: 'timestamp',
-    name: 'created_at',
+    name: 'updated_by',
   })
   updatedBy!: string;
 
   @DeleteDateColumn({
     type: 'timestamp',
-    name: 'updated_at',
+    name: 'deleted_at',
   })
   deletedAt!: Date;
 
   @CreateDateColumn({
     type: 'timestamp',
-    name: 'deleted_at',
+    name: 'deleted_by',
   })
   deletedBy!: string;
 

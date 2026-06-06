@@ -1,26 +1,38 @@
-import { create } from "domain";
-import { type } from "os";
-import { UpdateUserDto } from "src/core/users/dto/update-user.dto";
-import { Slide } from "../entities/slide.entity";
-import { SongSlide } from "../entities/song-slide.entity";
-import { SongType } from "../entities/song-type.entity";
-import { Song } from "../entities/song.entity"
+import {
+  Injectable,
+  HttpException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { ILike, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Transactional } from 'typeorm-transactional';
+
+import { Slide } from '../entities/slide.entity';
+import { SongSlide } from '../entities/song-slide.entity';
+import { SongType } from '../entities/song-type.entity';
+import { Song } from '../entities/song.entity';
+import { CreateSlideDto } from '../dto/create-slide.dto';
+import { CreateSongDto } from '../dto/create-song.dto';
+import { UpdateSongDto } from '../dto/update-song.dto';
 
 @Injectable()
 export class SongsService {
-  constructor() {
+  constructor(
     @InjectRepository(Song)
-    private songsRepository: Repository<Song>;
-    private slideRepository: Repository<Slide>;
-    private songSlideRepository: Repository<SongSlide>;
-  }
+    private songsRepository: Repository<Song>,
+    @InjectRepository(Slide)
+    private slideRepository: Repository<Slide>,
+    @InjectRepository(SongSlide)
+    private songSlideRepository: Repository<SongSlide>,
+  ) {}
 
   // Obtener todas las canciones
   async findAll() {
     try {
       return await this.songsRepository.find({
         where: { active: true },
-        relations: { songsType: true, songSlides: true },
+        relations: { songType: true, songSlides: true },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -33,17 +45,17 @@ export class SongsService {
     try {
       return await this.songsRepository.findOne({
         where: { id: songId, active: true },
-        relations: { 
+        relations: {
           songType: true,
           songSlides: {
-            slide: true
-          }
-        }, 
+            slide: true,
+          },
+        },
         order: {
           songSlides: {
             order: 'ASC',
-          }
-        }
+          },
+        },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -60,29 +72,32 @@ export class SongsService {
 
       return await this.songsRepository.find({
         where: [
-          { name: ILike(searchPattern), active: true },
-          { description: ILike(searchPattern), active: true },
+          { title: ILike(searchPattern), active: true },
+          { summary: ILike(searchPattern), active: true },
         ],
         relations: {
           songType: true,
         },
         select: {
           id: true,
-          name: true,
-          description: true,
+          title: true,
+          summary: true,
           active: true,
           songType: {
             id: true,
-            name: true,
-          }
+            type: true,
+            active: true,
+          },
         },
         order: {
-          name: 'ASC',
+          title: 'ASC',
         },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al obtener la(s) canción(es)');
+      throw new InternalServerErrorException(
+        'Error al obtener la(s) canción(es)',
+      );
     }
   }
 
@@ -94,8 +109,8 @@ export class SongsService {
         where: { content: ILike(content), active: true },
         select: {
           id: true,
-          content: true
-        }
+          content: true,
+        },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -120,8 +135,8 @@ export class SongsService {
   async createSong(createSongDto: CreateSongDto, executorId: string) {
     try {
       const newSong = this.songsRepository.create({
-        name: createSongDto.title,
-        description: createSongDto.summary,
+        title: createSongDto.title,
+        summary: createSongDto.summary,
         songType: { id: createSongDto.typeId },
         createdBy: executorId,
       });
@@ -129,11 +144,18 @@ export class SongsService {
       return await this.songsRepository.save(newSong);
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al crear la canción en el servidor');
+      throw new InternalServerErrorException(
+        'Error al crear la canción en el servidor',
+      );
     }
   }
 
-  async createSlideSong(songId: string, slideId: string, order: number, executorId: string) {
+  async createSlideSong(
+    songId: string,
+    slideId: string,
+    order: number,
+    executorId: string,
+  ) {
     try {
       const newSongSlide = this.songSlideRepository.create({
         song: { id: songId },
@@ -145,7 +167,9 @@ export class SongsService {
       return await this.songSlideRepository.save(newSongSlide);
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al crear el enlace canción/diapositiva');
+      throw new InternalServerErrorException(
+        'Error al crear el enlace canción/diapositiva',
+      );
     }
   }
 
@@ -173,10 +197,11 @@ export class SongsService {
       }
 
       return songCreated;
-
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error crítico al orquestar la creación transaccional de la canción');
+      throw new InternalServerErrorException(
+        'Error crítico al orquestar la creación transaccional de la canción',
+      );
     }
   }
 
@@ -191,7 +216,7 @@ export class SongsService {
     }
   }
 
-  async removeSlide(slide: Slide, executorID) {
+  async removeSlide(slide: Slide, executorID: string) {
     try {
       slide.active = false;
       slide.deletedBy = executorID;
@@ -203,21 +228,65 @@ export class SongsService {
     }
   }
 
-  async deleteSongSlide(songId: string, slideId: string, executorId: string) {
+  async findSongSlide(songId: string, slideId: string) {
     try {
-      return await this.songSlideRepository.delete({ where: { song: { id: songId }, slide: { id: slideId } } });
+      return await this.songSlideRepository.findOne({
+        where: {
+          song: { id: songId },
+          slide: { id: slideId },
+          active: true,
+        },
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Error al eliminar vinculo canción-diapositiva');
+      throw new InternalServerErrorException(
+        'Error al obtener el enlace canción-diapositiva',
+      );
     }
   }
 
-  async updateSong(updateSongDto: UpdateSongDto, executorId: string) {
+  async deleteSongSlide(songId: string, slideId: string, executorId: string) {
     try {
-      const song = this.findOne(updateSongDto.songId);
+      const songSlide = await this.findSongSlide(songId, slideId);
 
-      song.title = updateSongDto.title;
-      song.summary = updateSongDto.summary;
+      if (!songSlide) {
+        throw new NotFoundException(
+          'No se encontró el enlace canción-diapositiva para eliminar',
+        );
+      }
+
+      songSlide.active = false;
+      songSlide.deletedBy = executorId;
+
+      return await this.songSlideRepository.softDelete(songSlide);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException(
+        'Error al eliminar vinculo canción-diapositiva',
+      );
+    }
+  }
+
+  async updateSong(
+    songId: string,
+    updateSongDto: UpdateSongDto,
+    executorId: string,
+  ) {
+    try {
+      const song = await this.findOne(songId);
+
+      if (!song) {
+        throw new NotFoundException(
+          'No se encontró la canción para actualizar',
+        );
+      }
+
+      if (updateSongDto.title) song.title = updateSongDto.title;
+      if (updateSongDto.summary) song.summary = updateSongDto.summary;
+      if (updateSongDto.typeId) {
+        song.songType = { id: updateSongDto.typeId } as SongType;
+      }
+      song.updatedBy = executorId;
 
       return await this.songsRepository.save(song);
     } catch (error) {
@@ -227,20 +296,26 @@ export class SongsService {
   }
 
   @Transactional()
-  async update(updateSongDto: UpdateSongDto, executorId: string) {
+  async update(
+    songId: string,
+    updateSongDto: UpdateSongDto,
+    executorId: string,
+  ) {
     try {
-      await this.updatedSong(updateSongDto, executorId);
+      const song = await this.updateSong(songId, updateSongDto, executorId);
 
-      for (slide = 0; slide < song.slides.length; slide++) {
-        await this.deleteSongSlide(song.id, song.slides[slide].id, executorId);
+      for (let slide = 0; slide < song.songSlides.length; slide++) {
+        const slides = song.songSlides[slide];
+
+        await this.deleteSongSlide(song.id, slides.slide.id, executorId);
 
         let slideId: string;
-        const existingSlide = await this.findSlideByText(song.slides[slide].content);
+        const existingSlide = await this.findSlideByText(slides.slide.content);
 
         if (existingSlide) {
           slideId = existingSlide.id;
         } else {
-          const slideCreated = await this.createSlide(song.slides[slide], executorId);
+          const slideCreated = await this.createSlide(slides.slide, executorId);
           slideId = slideCreated.id;
         }
 
