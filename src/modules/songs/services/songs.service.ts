@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transactional } from 'typeorm-transactional';
 
@@ -324,6 +324,62 @@ export class SongsService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al actualizar canción');
+    }
+  }
+
+  @Transactional()
+  async delete(songId: string, executorId: string) {
+    try {
+      const song = await this.findOne(songId);
+
+      if (!song) {
+        throw new NotFoundException('No se encontró la canción para eliminar');
+      }
+
+      // Obtiene los IDs de las diapositivas asociadas a la canción antes de desactivarlas
+      const slideIdsDeLaCancion =
+        song.songSlides?.map((ss) => ss.slide.id) || [];
+
+      // Desactiva los enlaces canción-diapositiva asociados a la canción
+      await this.songSlideRepository.update(
+        { song: { id: songId } },
+        { active: false, deletedBy: executorId },
+      );
+
+      if (slideIdsDeLaCancion.length > 0) {
+        // Verifica si las diapositivas de la canción están siendo utilizadas por otras canciones activas
+        const slidesInUse = await this.songSlideRepository
+          .createQueryBuilder('songSlide')
+          .select('songSlide.slideId', 'slideId')
+          .where('songSlide.slideId IN (:...ids)', { ids: slideIdsDeLaCancion })
+          .andWhere('songSlide.active = :active', { active: true })
+          .getRawMany();
+
+        // Obtiene los IDs de las diapositivas que aún están en uso por otras canciones activas
+        const idsSlidesInUse = slidesInUse.map((s) => s.slideId);
+
+        // Filtra los IDs de las diapositivas de la canción que no están siendo utilizadas por otras canciones activas
+        const idsNotInUse = slideIdsDeLaCancion.filter((id) => {
+          return !idsSlidesInUse.includes(id);
+        });
+
+        if (idsNotInUse.length > 0) {
+          // Desactiva las diapositivas que no están siendo utilizadas por otras canciones activas
+          await this.slideRepository.update(
+            { id: In(idsNotInUse) },
+            { active: false, deletedBy: executorId },
+          );
+        }
+      }
+
+      song.active = false;
+      song.deletedBy = executorId;
+
+      // Al desactivar la canción, también se desactivan los enlaces canción-diapositiva y las diapositivas que no están siendo utilizadas por otras canciones activas
+      return await this.songsRepository.save(song);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Error al eliminar canción');
     }
   }
 }

@@ -76,4 +76,15 @@ export class SongsController {
     const executorId = req.user?.id || req.user?.sub;
     return await this.songsService.update(songId, updateSongDto, executorId);
   }
+
+  @ApiOperation({ summary: 'Eliminar una canción existente' })
+  @ApiResponse({ status: 200, description: 'Canción eliminada exitosamente' })
+  @ApiResponse({ status: 404, description: 'Canción no encontrada' })
+  async delete(
+    @Param('songId', new ParseUUIDPipe()) songId: string,
+    @Req() req: any,
+  ) {
+    const executorId = req.user?.id || req.user?.sub;
+    return await this.songsService.delete(songId, executorId);
+  }
 }
