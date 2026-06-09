@@ -91,12 +91,61 @@ export class UsersService {
     }
   }
 
+  // Método para obtener un usuario por su ID incluyendo sus roles
+  async findOneWithRoles(id: string) {
+    try {
+      if (!id) {
+        throw new BadRequestException('ID de usuario es requerido');
+      }
+
+      const user = await this.usersRepository.findOne({
+        where: {
+          id,
+          active: true,
+          userRoles: {
+            active: true,
+            role: {
+              active: true,
+            },
+          },
+        },
+        relations: {
+          userRoles: {
+            role: true,
+          },
+        },
+      });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+
+      return user;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Error al obtener el usuario');
+    }
+  }
+
   // Método para obtener un usuario por su correo electrónico
   async findByEmail(email: string) {
     try {
-      const user = await this.usersRepository.findOneBy({
-        email,
-        active: true,
+      const user = await this.usersRepository.findOne({
+        where: {
+          email: email,
+          active: true,
+          userRoles: {
+            active: true,
+            role: {
+              active: true,
+            },
+          },
+        },
+        relations: {
+          userRoles: {
+            role: true,
+          },
+        },
       });
 
       if (!user) {

@@ -47,6 +47,7 @@ export class AuthService {
         payload: { email },
         ip,
       });
+
       return user;
     } catch (error) {
       if (error instanceof HttpException) throw error;

@@ -8,15 +8,20 @@ import {
   Put,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { Roles } from '../../../core/roles/decorators/roles.decorator';
-import { RoleSlugEnum } from 'src/core/roles/enums/role-slug.enum';
+import { RoleSlugEnum } from '../../../core/roles/enums/role-slug.enum';
 import { SongsService } from '../services/songs.service';
 import { CreateSongDto } from '../dto/create-song.dto';
 import { UpdateSongDto } from '../dto/update-song.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../../../core/roles/guards/role.guard';
 
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@ApiBearerAuth()
 @Controller('song')
 export class SongsController {
   constructor(private songsService: SongsService) {}
@@ -30,15 +35,6 @@ export class SongsController {
     return await this.songsService.findAll();
   }
 
-  @ApiOperation({ summary: 'Obtener todas las canciones' })
-  @ApiResponse({ status: 200, description: 'Lista de todas las canciones' })
-  @ApiResponse({ status: 500, description: 'Error al obtener las canciones' })
-  @Roles(RoleSlugEnum.ADMIN, RoleSlugEnum.USER)
-  @Get(':songId')
-  async findOne(@Param('songId', new ParseUUIDPipe()) songId: string) {
-    return await this.songsService.findOne(songId);
-  }
-
   @ApiOperation({ summary: 'Busqueda personalizada de canciones' })
   @ApiResponse({
     status: 200,
@@ -49,6 +45,15 @@ export class SongsController {
   @Get('search')
   async search(@Query('term') term: string) {
     return await this.songsService.search(term);
+  }
+
+  @ApiOperation({ summary: 'Obtener todas las canciones' })
+  @ApiResponse({ status: 200, description: 'Lista de todas las canciones' })
+  @ApiResponse({ status: 500, description: 'Error al obtener las canciones' })
+  @Roles(RoleSlugEnum.ADMIN, RoleSlugEnum.USER)
+  @Get(':songId')
+  async findOne(@Param('songId', new ParseUUIDPipe()) songId: string) {
+    return await this.songsService.findOne(songId);
   }
 
   @ApiOperation({ summary: 'Crear una nueva canción' })
@@ -80,6 +85,8 @@ export class SongsController {
   @ApiOperation({ summary: 'Eliminar una canción existente' })
   @ApiResponse({ status: 200, description: 'Canción eliminada exitosamente' })
   @ApiResponse({ status: 404, description: 'Canción no encontrada' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   async delete(
     @Param('songId', new ParseUUIDPipe()) songId: string,
     @Req() req: any,

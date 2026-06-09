@@ -27,14 +27,18 @@ export class RolesGuard implements CanActivate {
     // Obtiene el usuario desde el request (inyectado previamente por el AuthGuard('jwt'))
     const { user } = context.switchToHttp().getRequest();
 
-    if (!user || !user.roles) {
+    if (!user || !user.userRoles) {
       throw new ForbiddenException(
         'Permiso denegado para acceder a este recurso',
       );
     }
 
     // Evalúa matemáticamente si el usuario tiene al menos uno de los roles requeridos
-    const hasRole = requiredRoles.some((role) => user.roles.includes(role));
+    const hasRole = requiredRoles.some((role) => {
+      return user.userRoles.some((userRole) => {
+        return userRole.role.slug === role;
+      });
+    });
 
     if (!hasRole) {
       throw new ForbiddenException(

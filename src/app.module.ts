@@ -7,6 +7,8 @@ import { AuthModule } from './core/auth/auth.module';
 import { EnvModel } from './models/env.model';
 import { RolesModule } from './core/roles/roles.module';
 import { SongsModule } from './modules/songs/songs.module';
+import { addTransactionalDataSource } from 'typeorm-transactional';
+import { DataSource } from 'typeorm';
 
 @Module({
   imports: [
@@ -23,6 +25,14 @@ import { SongsModule } from './modules/songs/songs.module';
         synchronize: false,
       }),
       inject: [ConfigService],
+      dataSourceFactory: async (options) => {
+        if (!options) {
+          throw new Error('Invalid options passed to dataSourceFactory');
+        }
+        return await addTransactionalDataSource(
+          new DataSource(options),
+        ).initialize();
+      },
     }),
     UsersModule,
     AuthModule,

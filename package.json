@@ -25,7 +25,8 @@
     "migrations:run": "npm run typeorm migration:run",
     "seed:roles": "ts-node src/database/seeds/roles.seed.ts",
     "seed:user-admin": "ts-node src/database/seeds/user-admin.seed.ts",
-    "seed:user-role-admin": "ts-node src/database/seeds/user-role-admin.seed.ts"
+    "seed:user-role-admin": "ts-node src/database/seeds/user-role-admin.seed.ts",
+    "seed:song-types": "ts-node src/database/seeds/song-type.seed.ts"
   },
   "dependencies": {
     "@as-integrations/express5": "^1.1.2",

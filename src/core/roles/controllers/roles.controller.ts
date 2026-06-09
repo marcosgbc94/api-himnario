@@ -26,6 +26,8 @@ import { AuditAction } from '../../audit/decorators/audit.decorator';
 import { AuditActionEnum } from '../../audit/enums/AuditAction.enum';
 import { AssignRoleDTO } from '../dto/assing-role.dto';
 
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
   constructor(private rolesService: RolesService) {}
