@@ -4,7 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  DeleteDateColumn,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
@@ -44,12 +43,6 @@ export class SongSlide {
   })
   updatedAt!: Date;
 
-  @DeleteDateColumn({
-    type: 'timestamp',
-    name: 'deleted_at',
-  })
-  deletedAt!: Date;
-
   @Column({
     type: 'uuid',
     nullable: true,
@@ -63,11 +56,4 @@ export class SongSlide {
     name: 'updated_by',
   })
   updatedBy!: string;
-
-  @Column({
-    type: 'uuid',
-    nullable: true,
-    name: 'deleted_by',
-  })
-  deletedBy!: string;
 }

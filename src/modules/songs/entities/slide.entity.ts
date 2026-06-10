@@ -38,11 +38,13 @@ export class Slide {
   @UpdateDateColumn({
     type: 'timestamp',
     name: 'updated_at',
+    nullable: true,
   })
   updatedAt!: Date;
 
-  @CreateDateColumn({
-    type: 'timestamp',
+  @Column({
+    type: 'uuid',
+    nullable: true,
     name: 'updated_by',
   })
   updatedBy!: string;
@@ -50,14 +52,16 @@ export class Slide {
   @DeleteDateColumn({
     type: 'timestamp',
     name: 'deleted_at',
+    nullable: true,
   })
-  deletedAt!: Date;
+  deletedAt!: Date | null;
 
-  @CreateDateColumn({
-    type: 'timestamp',
+  @Column({
+    type: 'uuid',
+    nullable: true,
     name: 'deleted_by',
   })
-  deletedBy!: string;
+  deletedBy!: string | null;
 
   @OneToMany(() => SongSlide, (songSlide) => songSlide.slide)
   songSlides!: SongSlide[];

@@ -101,16 +101,21 @@ export class SongsService {
     }
   }
 
-  async findSlideByText(content: string) {
+  async findSlideByText(
+    content: string,
+    active: boolean | undefined = undefined,
+  ) {
     if (!content) return null;
 
     try {
       return this.slideRepository.findOne({
-        where: { content: ILike(content), active: true },
+        where: { content: ILike(content), active: active },
+
         select: {
           id: true,
           content: true,
         },
+        withDeleted: true,
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -216,12 +221,21 @@ export class SongsService {
     }
   }
 
-  async removeSlide(slide: Slide, executorID: string) {
+  async removeSlide(slideId: string, executorID: string) {
     try {
+      const slide = await this.findSlide(slideId);
+
+      if (!slide) {
+        throw new NotFoundException(
+          'No se encontró la diapositiva para eliminar',
+        );
+      }
+
       slide.active = false;
       slide.deletedBy = executorID;
 
-      return await this.slideRepository.softDelete(slide);
+      await this.slideRepository.save(slide);
+      return await this.slideRepository.softDelete({ id: slideId });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al eliminar diapositiva');
@@ -255,10 +269,7 @@ export class SongsService {
         );
       }
 
-      songSlide.active = false;
-      songSlide.deletedBy = executorId;
-
-      return await this.songSlideRepository.softDelete(songSlide);
+      return await this.songSlideRepository.delete(songSlide.id);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
@@ -304,23 +315,56 @@ export class SongsService {
     try {
       const song = await this.updateSong(songId, updateSongDto, executorId);
 
-      for (let slide = 0; slide < song.songSlides.length; slide++) {
-        const slides = song.songSlides[slide];
+      if (updateSongDto.slides && updateSongDto.slides.length > 0) {
+        await this.songSlideRepository.delete({ song: { id: song.id } });
 
-        await this.deleteSongSlide(song.id, slides.slide.id, executorId);
-
-        let slideId: string;
-        const existingSlide = await this.findSlideByText(slides.slide.content);
-
-        if (existingSlide) {
-          slideId = existingSlide.id;
-        } else {
-          const slideCreated = await this.createSlide(slides.slide, executorId);
-          slideId = slideCreated.id;
+        const orphanSlideIds = new Set<string>();
+        if (song.songSlides) {
+          song.songSlides.forEach((ss) => {
+            if (ss.slide) orphanSlideIds.add(ss.slide.id);
+          });
         }
 
-        await this.createSlideSong(songId, slideId, slide + 1, executorId);
+        for (let i = 0; i < updateSongDto.slides.length; i++) {
+          const slideDto = updateSongDto.slides[i];
+
+          let slideId: string;
+
+          const existingSlide = await this.findSlideByText(slideDto.content);
+
+          if (existingSlide) {
+            slideId = existingSlide.id;
+
+            if (
+              existingSlide.active === false ||
+              existingSlide.deletedAt !== null
+            ) {
+              existingSlide.active = true;
+              existingSlide.updatedBy = executorId;
+              existingSlide.deletedBy = null;
+              existingSlide.deletedAt = null;
+
+              await this.slideRepository.save(existingSlide);
+            }
+
+            orphanSlideIds.delete(slideId);
+          } else {
+            const slideCreated = await this.createSlide(slideDto, executorId);
+            slideId = slideCreated.id;
+          }
+
+          await this.createSlideSong(song.id, slideId, i + 1, executorId);
+        }
+
+        if (orphanSlideIds.size > 0) {
+          const idsToDelete = Array.from(orphanSlideIds);
+          for (const id of idsToDelete) {
+            await this.removeSlide(id, executorId);
+          }
+        }
       }
+
+      return await this.findOne(songId);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al actualizar canción');
@@ -343,7 +387,7 @@ export class SongsService {
       // Desactiva los enlaces canción-diapositiva asociados a la canción
       await this.songSlideRepository.update(
         { song: { id: songId } },
-        { active: false, deletedBy: executorId },
+        { active: false },
       );
 
       if (slideIdsDeLaCancion.length > 0) {
