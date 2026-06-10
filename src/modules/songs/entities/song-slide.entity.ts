@@ -28,6 +28,10 @@ export class SongSlide {
   @Column({ type: 'integer', default: 0 })
   order!: number;
 
+  /**
+   * AUDITORÍA
+   */
+
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 
@@ -37,23 +41,10 @@ export class SongSlide {
   })
   createdAt!: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    name: 'updated_at',
-  })
-  updatedAt!: Date;
-
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'created_by',
   })
-  createdBy!: string;
-
-  @Column({
-    type: 'uuid',
-    nullable: true,
-    name: 'updated_by',
-  })
-  updatedBy!: string;
+  createdBy!: string | null;
 }

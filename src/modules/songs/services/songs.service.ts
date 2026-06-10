@@ -32,7 +32,18 @@ export class SongsService {
     try {
       return await this.songsRepository.find({
         where: { active: true },
-        relations: { songType: true, songSlides: true },
+        relations: {
+          songType: true,
+          songSlides: {
+            slide: true,
+          },
+        },
+        order: {
+          title: 'ASC',
+          songSlides: {
+            order: 'ASC',
+          },
+        },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -63,7 +74,7 @@ export class SongsService {
     }
   }
 
-  // Busqueda personalizada de canciones
+  // Busqueda personalizada de canciones por título, descripción y diapositiva
   async search(term: string) {
     try {
       if (!term || term.trim() === '') return [];
@@ -74,9 +85,21 @@ export class SongsService {
         where: [
           { title: ILike(searchPattern), active: true },
           { summary: ILike(searchPattern), active: true },
+          {
+            active: true,
+            songSlides: {
+              slide: {
+                content: ILike(searchPattern),
+                active: true,
+              },
+            },
+          },
         ],
         relations: {
           songType: true,
+          songSlides: {
+            slide: true,
+          },
         },
         select: {
           id: true,
@@ -259,17 +282,11 @@ export class SongsService {
     }
   }
 
-  async deleteSongSlide(songId: string, slideId: string, executorId: string) {
+  async deleteSongSlideBySongId(songId: string) {
     try {
-      const songSlide = await this.findSongSlide(songId, slideId);
-
-      if (!songSlide) {
-        throw new NotFoundException(
-          'No se encontró el enlace canción-diapositiva para eliminar',
-        );
-      }
-
-      return await this.songSlideRepository.delete(songSlide.id);
+      return await this.songSlideRepository.delete({
+        song: { id: songId },
+      });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
@@ -316,7 +333,7 @@ export class SongsService {
       const song = await this.updateSong(songId, updateSongDto, executorId);
 
       if (updateSongDto.slides && updateSongDto.slides.length > 0) {
-        await this.songSlideRepository.delete({ song: { id: song.id } });
+        await this.deleteSongSlideBySongId(song.id);
 
         const orphanSlideIds = new Set<string>();
         if (song.songSlides) {

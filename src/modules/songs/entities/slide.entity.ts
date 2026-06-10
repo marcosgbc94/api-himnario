@@ -22,6 +22,10 @@ export class Slide {
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 
+  /**
+   * AUDITORÍA
+   */
+
   @CreateDateColumn({
     type: 'timestamp',
     name: 'created_at',
@@ -33,21 +37,21 @@ export class Slide {
     nullable: true,
     name: 'created_by',
   })
-  createdBy!: string;
+  createdBy!: string | null;
 
   @UpdateDateColumn({
     type: 'timestamp',
     name: 'updated_at',
     nullable: true,
   })
-  updatedAt!: Date;
+  updatedAt!: Date | null;
 
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'updated_by',
   })
-  updatedBy!: string;
+  updatedBy!: string | null;
 
   @DeleteDateColumn({
     type: 'timestamp',

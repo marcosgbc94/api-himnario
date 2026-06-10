@@ -29,6 +29,10 @@ export class Song {
   @Column({ type: 'varchar', length: 512, nullable: true, name: 'summary' })
   summary?: string;
 
+  /**
+   * AUDITORÍA
+   */
+
   @Column({ type: 'boolean', default: true })
   active!: boolean;
 
@@ -38,38 +42,40 @@ export class Song {
   })
   createdAt!: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    name: 'updated_at',
-  })
-  updatedAt!: Date;
-
-  @DeleteDateColumn({
-    type: 'timestamp',
-    name: 'deleted_at',
-  })
-  deletedAt!: Date;
-
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'created_by',
   })
-  createdBy!: string;
+  createdBy!: string | null;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    name: 'updated_at',
+    nullable: true,
+  })
+  updatedAt!: Date | null;
 
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'updated_by',
   })
-  updatedBy!: string;
+  updatedBy!: string | null;
+
+  @DeleteDateColumn({
+    type: 'timestamp',
+    name: 'deleted_at',
+    nullable: true,
+  })
+  deletedAt!: Date | null;
 
   @Column({
     type: 'uuid',
     nullable: true,
     name: 'deleted_by',
   })
-  deletedBy!: string;
+  deletedBy!: string | null;
 
   @OneToMany(() => SongSlide, (songSlide) => songSlide.song)
   songSlides!: SongSlide[];
