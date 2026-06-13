@@ -6,7 +6,7 @@ import { UsersService } from './users.service';
 describe('UsersService', () => {
   let service: UsersService;
 
-  const userMock = { 
+  const userMock = {
     id: "123e4567-e89b-12d3-a456-426614174000",
     names: 'Ana',
     email: 'ana@ana.cl',

@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { ILike, In, Repository } from 'typeorm';
+import { ILike, In, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transactional } from 'typeorm-transactional';
 
@@ -409,15 +409,16 @@ export class SongsService {
 
       if (slideIdsDeLaCancion.length > 0) {
         // Verifica si las diapositivas de la canción están siendo utilizadas por otras canciones activas
-        const slidesInUse = await this.songSlideRepository
-          .createQueryBuilder('songSlide')
-          .select('songSlide.slideId', 'slideId')
-          .where('songSlide.slideId IN (:...ids)', { ids: slideIdsDeLaCancion })
-          .andWhere('songSlide.active = :active', { active: true })
-          .getRawMany();
+        const slidesInUse = await this.songSlideRepository.find({
+          where: {
+            slide: { id: In(slideIdsDeLaCancion) },
+            song: { id: Not(songId) },
+          },
+          relations: { slide: true },
+        });
 
         // Obtiene los IDs de las diapositivas que aún están en uso por otras canciones activas
-        const idsSlidesInUse = slidesInUse.map((s) => s.slideId);
+        const idsSlidesInUse = slidesInUse.map((s) => s.id);
 
         // Filtra los IDs de las diapositivas de la canción que no están siendo utilizadas por otras canciones activas
         const idsNotInUse = slideIdsDeLaCancion.filter((id) => {
@@ -430,6 +431,9 @@ export class SongsService {
             { id: In(idsNotInUse) },
             { active: false, deletedBy: executorId },
           );
+
+          // Eliminación (no permanente) de slides que ya no se usarán
+          await this.slideRepository.softDelete(idsNotInUse);
         }
       }
 
@@ -437,7 +441,9 @@ export class SongsService {
       song.deletedBy = executorId;
 
       // Al desactivar la canción, también se desactivan los enlaces canción-diapositiva y las diapositivas que no están siendo utilizadas por otras canciones activas
-      return await this.songsRepository.save(song);
+      await this.songsRepository.save(song);
+
+      return await this.songsRepository.softDelete({ id: song.id });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Error al eliminar canción');

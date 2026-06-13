@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -87,6 +88,7 @@ export class SongsController {
   @ApiResponse({ status: 404, description: 'Canción no encontrada' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Delete(':songId')
   async delete(
     @Param('songId', new ParseUUIDPipe()) songId: string,
     @Req() req: any,
